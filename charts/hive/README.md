@@ -19,3 +19,6 @@ https://blog.csdn.net/chenleiking/article/details/82492282
 ```$bash
 helm install hive -n my-hive
 ```
+## Checkout my other "impatient" K8s manifests
+* [Spark for impatient](https://github.com/psyking841/spark-cluster-for-impatient)
+* [Airflow for impatient](https://github.com/psyking841/airflow-for-impatient)
