@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hive
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: hive
+  template:
+    metadata:
+      labels:
+        app: hive
+    spec:
+      containers:
+        - name: hive
+          image: psyking841/hive:3.1.2
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: ["bash", "-c", "cp /opt/bootstrap/core-site.xml /etc/hadoop/ && cp /opt/bootstrap/hive-site.xml /etc/hadoop/ && /opt/bootstrap/bootstrap.sh"]
+          ports:
+            - containerPort: 10000
+            - containerPort: 10002
+            - containerPort: 9083
+          env:
+            - name: HADOOP_CONF_DIR
+              value: /etc/hadoop
+            - name: HIVE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hive-metastore-secret
+                  key: db-password
+          volumeMounts:
+            - name: hadoop-config-volume
+              mountPath: /etc/hadoop
+            - name: hive-custom-config-volume
+              mountPath: /opt/bootstrap
+          readinessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            tcpSocket:
+              port: 10000
+          livenessProbe:
+            tcpSocket:
+              port: 10002
+            failureThreshold: 10
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 30
+      volumes:
+        - name: hadoop-config-volume
+          emptyDir: {}
+        - name: hive-custom-config-volume
+          configMap:
+            name: hive-custom-config
+            defaultMode: 0777

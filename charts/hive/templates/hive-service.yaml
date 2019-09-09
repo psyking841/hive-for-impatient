@@ -1,0 +1,19 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: hive
+  name: hive-service
+spec:
+  ports:
+    - port: 10000
+      targetPort: 10000
+      name: thrift
+    - port: 10002
+      targetPort: 10002
+      name: webui
+    - port: 9083
+      targetPort: 9083
+      name: metastore
+  selector:
+    app: hive

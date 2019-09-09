@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hive-custom-config
+  labels:
+    app: hive
+data:
+  bootstrap.sh: |-
+    #!/bin/bash
+
+    set -ex
+
+    wait_for_port() {
+      local name="$1" host="$2" port="$3"
+      local j=0
+      while ! nc -z "$host" "$port" >/dev/null 2>&1 < /dev/null; do
+        j=$((j+1))
+        if [[ $j -ge $TRY_LOOP ]]; then
+          echo >&2 "$(date) - $host:$port still not reachable, giving up"
+          exit 1
+        fi
+        echo "$(date) - waiting for $name... $j/$TRY_LOOP"
+        sleep 20
+      done
+    }
+
+    cd /opt/bootstrap
+
+    # Apply custom config file context
+    for cfg in ./*; do
+      if [[ ! "$cfg" =~ bootstrap.sh ]]; then
+        cat $cfg > $HIVE_HOME/conf/${cfg##*/}
+      fi
+    done
+
+    # Replace hive metadata password
+    sed -i 's/${HIVE_PASSWORD}/'$HIVE_PASSWORD'/g' `grep '${HIVE_PASSWORD}' -rl $HIVE_HOME/conf`
+
+    # initSchema
+    if [[ ! -e $HADOOP_CONF_DIR/hive-metastore-initialization.out ]]; then
+      $HADOOP_HOME/bin/hadoop fs -mkdir -p /tmp
+      $HADOOP_HOME/bin/hadoop fs -mkdir -p /user/hive/warehouse
+      $HADOOP_HOME/bin/hadoop fs -chmod g+w /tmp
+      $HADOOP_HOME/bin/hadoop fs -chmod g+w /user/hive/warehouse
+
+      wait_for_port "MySQL" "hive-mysql-service" "3306"
+
+      $HIVE_HOME/bin/schematool -dbType mysql -initSchema --verbose &> $HADOOP_CONF_DIR/hive-metastore-initialization.out
+    fi
+
+    $HIVE_HOME/bin/hiveserver2 &
+    $HIVE_HOME/bin/hive --service metastore &
+
+    cp $HIVE_HOME/conf/hive-env.sh.template $HIVE_HOME/conf/hive-env.sh && echo "export HADOOP_CLIENT_OPTS=\"-Xmx512m -XX:MaxPermSize=1024m \$HADOOP_CLIENT_OPTS\"" >> $HIVE_HOME/conf/hive-env.sh
+
+    # keep running
+    sleep infinity
+  hive-site.xml: |-
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+    <configuration>
+      <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>hive</value>
+      </property>
+      <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>${HIVE_PASSWORD}</value>
+      </property>
+      <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:mysql://hive-mysql-service:3306/metastore?createDatabaseIfNotExist=true&amp;useSSL=false</value>
+      </property>
+      <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>com.mysql.jdbc.Driver</value>
+      </property>
+      <property>
+        <name>system:java.io.tmpdir</name>
+        <value>/tmp</value>
+      </property>
+      <property>
+        <name>system:user.name</name>
+        <value>root</value>
+      </property>
+      <property>
+        <name>hive.server2.authentication</name>
+        <value>NOSASL</value>
+      </property>
+    </configuration>
+  core-site.xml: |-
+      <?xml version="1.0"?>
+      <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+      <configuration>
+        {{- if .Values.cosEndpoint }}
+        <property>
+            <name>fs.s3a.endpoint</name>
+            <value>{{ .Values.cosEndpoint }}</value>
+        </property>
+        {{- end }}
+        {{- if .Values.cosSecret.accessKey }}
+        <property>
+          <name>fs.s3a.access.key</name>
+          <value>{{ .Values.cosSecret.accessKey }}</value>
+        </property>
+        {{- end }}
+        {{- if .Values.cosSecret.secretKey }}
+        <property>
+          <name>fs.s3a.secret.key</name>
+          <value>{{ .Values.cosSecret.secretKey }}</value>
+        </property>
+        {{- end }}
+      </configuration>

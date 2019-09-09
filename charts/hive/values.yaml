@@ -1,0 +1,49 @@
+# Default values for hive.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image: psyking841/hive
+imageTag: 3.1.1
+imagePullPolicy: Always
+imagePullSecrets:
+- regcred
+
+replicaCounts:
+  metastore: 1
+  server2: 1
+
+cosSecret:
+   accessKey:
+   secretKey:
+
+homeDir: "/opt/hive"
+hadoopHomeDir: "/opt/hadoop"
+cosEndpoint: "s3.private.us-south.cloud-object-storage.appdomain.cloud"
+
+hiveserver:
+  enabed: false
+
+resources:
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+  requests:
+    cpu: "0.5"
+    memory: "1Gi"
+
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

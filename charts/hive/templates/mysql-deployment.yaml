@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hive-mysql
+  name: hive-mysql
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: hive-mysql
+  template:
+    metadata:
+      labels:
+        app: hive-mysql
+    spec:
+      initContainers:
+        - name: remove-lost-found
+          image: busybox:1.29.2
+          imagePullPolicy: IfNotPresent
+          command: ["rm", "-rf", "/var/lib/mysql/lost+found"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+      containers:
+        - name: mysql
+          image: mysql:5.7
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              value: "metastore"
+            - name: MYSQL_USER
+              value: "hive"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-hive-password
+      volumes:
+        - name: data
+          emptyDir: {}
