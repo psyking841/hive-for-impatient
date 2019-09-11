@@ -1,4 +1,4 @@
-# Apache Hive
+# Apache Hive for Impatient
 
 ## Summary
 This Charts manifest provisions a Hive instance with MySQL db as metastore.
