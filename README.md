@@ -1,12 +1,24 @@
-# Hive on Kubernetes
+# Apache Hive
+
+## Summary
+This Charts manifest provisions a Hive instance with MySQL db as metastore.
+
+[Apache Hive](https://hive.apache.org/) is an open source data warehouse software.
+
+Reference:
+https://blog.csdn.net/chenleiking/article/details/82492282
 
 ## Hive Docker image
-Hive version: 2.3.5.1
-The last digit is the version for this repo. The first three digits are hive version used.
-Hive with Derby, with Ranger plugin
+* Version 3.1.2
+* Prebuild image: [psyking841/hive:3.1.2](https://cloud.docker.com/u/psyking841/repository/docker/psyking841/hive)
 
-Ranger plugin is by default not installed, but it can be enabled by setting "$ENABLE_RANGER_HIVE_PLUGIN" environment variable to `true` (by default it is set to `false`).
-
-```SHELL
-docker build -t "psyking841/hive:latest" .
+## To run with Minikube
+* Prerequesits
+    * [Install Helm](https://helm.sh/docs/using_helm/)
+* Provision Hive using following command:
+```$bash
+helm install hive -n my-hive
 ```
+## Checkout my other "impatient" K8s manifests
+* [Spark for impatient](https://github.com/psyking841/spark-cluster-for-impatient)
+* [Airflow for impatient](https://github.com/psyking841/airflow-for-impatient)
